@@ -24,7 +24,6 @@ Exposes safe tools (math eval, time, file search/read, log summarizer) and lets 
 
 ## 🚀 Quickstart (with uv)
 
-```bash
 # 1) clone
 git clone git@github.com:KrishnaChaitanya1027/mcp-copilot-lab.git
 cd mcp-copilot-lab
@@ -51,21 +50,28 @@ Greet Krishna, tell me the time in America/Toronto,
 list **/*.log, and show the first 40 bytes of logs/app.log
 ### 3) Add `QUICKSTART.md`
 ```bash
-cat > QUICKSTART.md <<'EOF'
-# Quickstart — MCP Copilot Lab
+💬 Example prompt
+Greet Krishna, tell me the time in America/Toronto,
+list **/*.log, and show the first 40 bytes of logs/app.log
 
-This project is a minimal **MCP server + CLI chat** with 6 safe tools.
+🧩 Extend with your own tool
 
-## Run in 60 seconds
+Add schema in tools/list
 
-```bash
-git clone git@github.com:KrishnaChaitanya1027/mcp-copilot-lab.git
-cd mcp-copilot-lab
-uv venv
-uv pip install openai python-dotenv
-echo "OPENAI_API_KEY=sk-..." > .env
-echo "OPENAI_MODEL=gpt-4o-mini" >> .env
-mkdir -p sandbox/logs
-printf "error\nwarn\n" > sandbox/logs/app.log
-uv run cli_chat.py
-git add README.md QUICKSTART.md
+Handle it in tools/call
+
+/reload the chat and call it
+
+Example: word_count is shown in the full README of this repo.
+
+🧪 Testing
+uv pip install pytest
+uv run pytest -q
+
+🛠 Troubleshooting
+
+Hangs until Ctrl+C: some path didn’t call respond(...) → check [mcp stderr]
+
+400 invalid tool name: only a-zA-Z0-9_- allowed
+
+No .log files found: use recursive pattern: **/*.log
