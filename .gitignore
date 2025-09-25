@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+
+# Virtual env
+.venv/
+venv/
+
+# OS junk
+.DS_Store
+
+# Local data & sandbox
+sandbox/**/*.log
+sandbox/**/*.tmp
+
+# Secrets
+.env
+.env.*

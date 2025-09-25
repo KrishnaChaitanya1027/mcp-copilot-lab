@@ -1,0 +1,4 @@
+CALL say_hello args={'name': 'Krishna'}
+CALL get_time args={'timezone': 'America/Toronto'}
+CALL say_hello args={'name': 'Krishna'}
+CALL get_time args={'timezone': 'America/Toronto'}

@@ -1,0 +1,202 @@
+    1  ping google.com
+    2  ping 8.8.8.8
+    3  ping google.com
+    4  curl -LsSf https://astral.sh/uv/install.sh | sh
+    5  uv slef update
+    6  uv self update
+    7  pwd
+    8  echo 'eval "$(uv generate-shell-completion bash)"' >> ~/.bashrc
+    9  echo 'eval "$(uvx --generate-shell-completion bash)"' >> ~/.bashrc
+   10  uv
+   11  uv 
+   12  uv python install 
+   13  la -l
+   14  ls -l
+   15  uv tool install 
+   16  uv tool list 
+   17  uv tool update-shell
+   18  uv python list
+   19  uv python upgrade
+   20  uv python install 3.14
+   21  uv python find
+   22  echo @shell
+   23  echo @SHELL
+   24  cat os
+   25  cat os -release
+   26  uv python intall
+   27  uv install python
+   28  uv python install
+   29  uv python version 
+   30  python
+   31  sudo update python
+   32  uv python upgrade
+   33  uv pip install e .
+   34  uv
+   35  ls -l
+   36  .venv
+   37  uv venv
+   38  cd /home
+   39  pwd
+   40  su
+   41  uv
+   42  pwd
+   43  ls -l
+   44  uv venv
+   45  uv run main.py
+   46  ls-l
+   47  ls -l
+   48  cd core
+   49  ls-l
+   50  ls -l
+   51  uv venv
+   52  uv pip install -e .
+   53  uv run main.py
+   54  sed -i '/from anthropic\.types import/d' core/tools.py
+   55  uv run main.py
+   56  sed -i 's/\bToolResultBlockParam/dict/g' core/tools.py
+   57  sed -i 's/\bMessage/object/g' core/tools.py
+   58  uv run main.py
+   59  sed -i '/from anthropic\.types import MessageParam/d' core/cli_chat.py
+   60  sed -i '/from anthropic\.types import MessageParam/d' core/core.py
+   61  sed -i '/from anthropic\.types import MessageParam/d' core/cli_chat.py
+   62  sed -i '/from anthropic\.types import MessageParam/d' core/chat.py
+   63  sed -i 's/\bMessageParam\b/dict/g' core/cli_chat.py
+   64  sed -i 's/\bMessageParam\b/dict/g' core/chat.py
+   65  uv run main.py
+   66  uv venv
+   67  uv run main.py
+   68  pip install -e .
+   69  uv pip install -e .
+   70  uv run main.py
+   71  uv venv
+   72  uv source .venv/bin/activate
+   73  source .venv/bin/activate
+   74  uv run main.py
+   75  uv venv
+   76  source .venv/bin/activate
+   77  pwd
+   78  uv run main.py
+   79  uv venv
+   80  source .venv/bin/activate
+   81  uv pip install e .
+   82  uv run main.py
+   83  pwd
+   84  uv venv
+   85  source .venv/bin/activate
+   86  uv pip install e .
+   87  uv run main.py
+   88  uv venv
+   89  source .venv/bin/activate
+   90  uv pip install e .
+   91  uv run main.py
+   92  npm install -g @anthropic-ai/claude-code
+   93  uv npm install -g @anthropic-ai/claude-code
+   94  uv install -g @anthropic-ai/claude-code
+   95  uv pip install -g @anthropic-ai/claude-code
+   96  npm install -g @anthropic-ai/claude-code
+   97  sudo npm install -g @anthropic-ai/claude-code
+   98  claude 
+   99  npm i -g @openai/codex
+  100  sudo npm i -g @openai/codex
+  101  gpt
+  102  codex
+  103  uv run main.py
+  104  codex
+  105  rm codex
+  106  uninstall codex
+  107  uv uninstall codex
+  108  uv pip uninstal codexx
+  109  uv run main.py
+  110  codex
+  111      npm uninstall -g @openai/codex
+  112  sudo npm uninstall -g @openai/codex
+  113  codex
+  114  claude
+  115  uv pip uninstall openai
+  116  uv run main.py
+  117  uv venv
+  118  source .venv/bin/activate
+  119  uv pip install e .
+  120  uv run main.py
+  121  ls -l
+  122  mkdir MCP PROJECT
+  123  ls -l
+  124  rmdir PROJECT/
+  125  ls -l
+  126  rename MCP MCP_PROJECT
+  127  rename dir MCP MCP_PROJECT
+  128  rename dir MCP
+  129  rename dir MCP > MCP_POROJECT
+  130  rename --help
+  131  rename MCP_PROJECT dir MCP
+  132  ls -l
+  133  cat MCP_POROJECT 
+  134  ls -lah
+  135  echo What the Fuck > MCP_POROJECT 
+  136  cat MCP_POROJECT 
+  137  rm MCP_POROJECT 
+  138  ls -l
+  139  cd Desktop/
+  140  ls -l
+  141  cd MCP_openAI/
+  142  ls
+  143  cd MCP\ FINAL/
+  144  ls -l
+  145  cd mcp_cli_openai_port_FINAL/
+  146  ls -l
+  147  uv
+  148  npm install -g @openai/codex
+  149  sudo npm install -g @openai/codex
+  150  codex
+  151  uv run main,py
+  152  .source/bin/activate
+  153  ls -l
+  154  uv run main.py
+  155  cd ..
+  156  cd..
+  157  cd ..
+  158  mkdir my-mcp-project
+  159  cd my-mcp-project/
+  160  wget -qO - https://download.sublimetext.com/sublimehq-pub.gpg | sudo tee /etc/apt/keyrings/sublimehq-pub.asc > /dev/null
+  161  sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc
+  162  echo -e "[code]\nname=Visual Studio Code\nbaseurl=https://packages.microsoft.com/yumrepos/vscode\nenabled=1\nautorefresh=1\ntype=rpm-md\ngpgcheck=1\ngpgkey=https://packages.microsoft.com/keys/microsoft.asc" | sudo tee /etc/yum.repos.d/vscode.repo > /dev/null
+  163  dnf check-update
+  164  sudo dnf install code # or code-insiders
+  165  uv
+  166  uv run main.py
+  167  cd .
+  168  cd ..
+  169  ls -l
+  170  cd ..
+  171  ls -l
+  172  cd mcp_cli_openai_port_with_tools/
+  173  ls -l
+  174  uv .venv
+  175  uv venv
+  176  pip install openai python-dotenv
+  177  sudo pip install openai python-dotenv
+  178  pip install openai python-dotenv
+  179  cd Desktop/
+  180  cd my-mcp-project/
+  181  pyhton mcp_openai_client.py 
+  182  python mcp_openai_client.py 
+  183  uv run mcp_openai_client.py 
+  184  uv venv
+  185  source .venv/bin/activate
+  186  uv install python-dotenv
+  187  install python-dotenv
+  188  pip install python-dotenv
+  189  uv run my_mcp_openai_client
+  190  uv run my_mcp_openai_client.py
+  191  pwd
+  192  ls -l
+  193  uv run hello_mcp_server.py 
+  194  python run mcp_openai_client.py 
+  195  python mcp_openai_client.py 
+  196  python -mpip install python-dotenv open ai
+  197  python -m pip install python-dotenv open ai
+  198  uv venv
+  199  source .venv/bin/activate
+  200  uv pip install python-dotenv openai
+  201  history
+  202  history > building_mcp.txt
