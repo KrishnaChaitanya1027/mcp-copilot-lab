@@ -49,7 +49,7 @@ Example Prompt
 Greet Krishna, tell me the time in America/Toronto,
 list **/*.log, and show the first 40 bytes of logs/app.log
 ### 3) Add `QUICKSTART.md`
-```bash
+
 💬 Example prompt
 Greet Krishna, tell me the time in America/Toronto,
 list **/*.log, and show the first 40 bytes of logs/app.log
