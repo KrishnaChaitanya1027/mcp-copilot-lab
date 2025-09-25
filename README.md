@@ -27,6 +27,7 @@ uv venv
 uv pip install openai python-dotenv
 echo "OPENAI_API_KEY=sk-..." > .env
 echo "OPENAI_MODEL=gpt-4o-mini" >> .env
+OR CREATE A .env file and paste the above two lines.
 uv run cli_chat.py
 
 cat > README.md <<'EOF'
