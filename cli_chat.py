@@ -1,199 +1,348 @@
 #!/usr/bin/env python3
-import os, sys, json, subprocess, signal, time
-from dotenv import load_dotenv, find_dotenv
-from openai import OpenAI, RateLimitError
+"""
+cli_chat.py — OpenAI ↔ MCP bridge chat (REPL)
+
+- Spawns your MCP server from MCP_SERVER env (stdio transport)
+- Performs MCP initialize/initialized handshake (SDK servers)
+- Falls back gracefully for legacy JSON servers (no handshake)
+- Lists MCP tools and exposes them to OpenAI tool-calling
+- REPL with /help /tools /reset /reload /exit
+- Logs conversation to logs/chat.log
+
+.env required:
+  OPENAI_API_KEY=sk-...
+  OPENAI_MODEL=gpt-4o-mini
+  MCP_SERVER=python mcp_server.py          # or: uv run mcp run mcp_server.py
+
+Run:
+  uv run python cli_chat.py
+"""
+
+from __future__ import annotations
+import os
+import sys
+import json
+import time
+import shlex
+import pathlib
+import subprocess
+from typing import Any, Dict, List
+
+from dotenv import load_dotenv
+from openai import OpenAI
 
 # ---------- config ----------
-SYSTEM_PROMPT = "You are a helpful assistant. Prefer MCP tools over guessing. Be concise."
-MODEL_DEFAULT = "gpt-4o-mini"
-MCP_CMD = sys.executable           # python
-MCP_ARGS = ["hello_mcp_server.py"] # your server script
-TOOL_CALL_MAX = 6                  # safety cap per user turn
+load_dotenv()
+MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+MCP_CMD = os.getenv("MCP_SERVER", "python mcp_server.py")
+LOG_DIR = pathlib.Path("logs"); LOG_DIR.mkdir(exist_ok=True)
+LOG_FILE = LOG_DIR / "chat.log"
 
-# ---------- utils ----------
-def print_usage(resp):
-    u = getattr(resp, "usage", None)
-    if u:
-        print(f"[usage] prompt={u.prompt_tokens} out={u.completion_tokens} total={u.total_tokens}")
 
-def chat_with_retry(client, **kwargs):
-    delay = 1.5
-    for _ in range(5):
-        try:
-            return client.chat.completions.create(**kwargs)
-        except RateLimitError as e:
-            ra = getattr(e, "response", None)
-            retry_after = None
-            if ra and hasattr(ra, "headers"):
-                retry_after = ra.headers.get("retry-after")
-            time.sleep(float(retry_after or delay))
-            delay = min(delay * 2, 30)
-    raise
+# ---------- small logger ----------
+def log(line: str) -> None:
+    ts = time.strftime("%Y-%m-%d %H:%M:%S")
+    with LOG_FILE.open("a", encoding="utf-8") as f:
+        f.write(f"[{ts}] {line}\n")
 
-# ---------- minimal MCP stdio client ----------
-class MCP:
-    def __init__(self, cmd, args=None, env=None):
+
+# ---------- MCP stdio bridge ----------
+class MCPProc:
+    """
+    Minimal JSON-RPC over stdio bridge with MCP handshake support.
+
+    Compatible with:
+      - MCP SDK servers (require initialize/initialized)
+      - legacy JSON servers (no handshake)
+    """
+    def __init__(self, cmd: str) -> None:
         self.cmd = cmd
-        self.args = args or []
-        self.env = env or os.environ.copy()
-        self.p = None
+        self.p: subprocess.Popen[str] | None = None
         self._id = 0
+        self.initialized = False
 
-    def start(self):
+    # ---- process lifecycle ----
+    def start(self) -> None:
         if self.p and self.p.poll() is None:
             return
-        self.p = subprocess.Popen([self.cmd] + self.args,
-                                  stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                  text=True, env=self.env)
+        args = shlex.split(self.cmd)
+        self.p = subprocess.Popen(
+            args,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            text=True,
+            bufsize=1,  # line-buffered
+        )
+        log(f"MCP started: {self.cmd}")
+        # Attempt MCP handshake (safe no-op for legacy servers)
+        self._try_handshake()
 
-    def stop(self):
+    def stop(self) -> None:
         if self.p and self.p.poll() is None:
             try:
                 self.p.terminate()
-                self.p.wait(timeout=2)
             except Exception:
-                self.p.kill()
+                pass
+        self.p = None
+        self.initialized = False
+        log("MCP stopped")
 
-    def _rpc(self, method, params=None):
+    # ---- low-level json-rpc helpers ----
+    def _write(self, obj: dict, expect_response: bool) -> dict | None:
         if not self.p or self.p.poll() is not None:
             raise RuntimeError("MCP server not running")
-        self._id += 1
-        req = {"jsonrpc":"2.0","id":self._id,"method":method}
-        if params is not None:
-            req["params"] = params
-        self.p.stdin.write(json.dumps(req) + "\n")
+        line = json.dumps(obj) + "\n"
+        assert self.p.stdin is not None
+        self.p.stdin.write(line)
         self.p.stdin.flush()
-        line = self.p.stdout.readline()
-        if not line:
+
+        if not expect_response:
+            return None
+        assert self.p.stdout is not None
+        self.notify("notifications/initialized")
+        
+        resp_line = self.p.stdout.readline()
+        if not resp_line:
             raise RuntimeError("MCP server closed")
-        resp = json.loads(line)
+        try:
+            return json.loads(resp_line)
+        except Exception as e:
+            raise RuntimeError(f"Invalid JSON from server: {resp_line!r}") from e
+
+    def call(self, method: str, params: dict | None = None) -> dict:
+        self._id += 1
+        req = {"jsonrpc": "2.0", "id": self._id, "method": method}
+        if params:
+            req["params"] = params
+        return self._write(req, expect_response=True)  # dict (result or error)
+
+    def notify(self, method: str, params: dict | None = None) -> None:
+        req = {"jsonrpc": "2.0", "method": method}
+        if params:
+            req["params"] = params
+        self._write(req, expect_response=False)
+
+    # ---- MCP handshake for SDK servers ----
+    def _try_handshake(self) -> None:
+        """
+        Perform MCP initialize/initialized. If the server is legacy (no handshake),
+        ignore errors and continue.
+        """
+        if self.initialized:
+            return
+        try:
+            init_resp = self.call("initialize", {
+                "protocolVersion": "2024-11-05",
+                "clientInfo": {"name": "openai-bridge-cli", "version": "0.1.0"},
+                # Minimal client capabilities (empty objects are OK)
+                "capabilities": {
+                    "roots": {},          # host can advertise roots, we accept
+                    "prompts": {},        # we can accept prompts if server provides them
+                    "tools": {},          # we use tools
+                    "resources": {}       # we can accept resources
+                }
+            })
+            # Expect {"jsonrpc":"2.0","id":...,"result":{...}}
+            if isinstance(init_resp, dict) and "result" in init_resp:
+                # Correct notification name per MCP SDK
+                self.notify("notifications/initialized", {"someField": "someValue"})
+                self.initialized = True
+                log("MCP handshake complete")
+            else:
+                raise RuntimeError(f"initialize returned no result: {init_resp}")
+        except Exception as e:
+            # Legacy server (no handshake) or non-compliant response: continue gracefully
+            log(f"MCP handshake skipped/failed (legacy server?): {e}")
+
+    # ---- convenience wrappers ----
+    def list_tools(self) -> list[dict]:
+        resp = self.call("tools/list")
         if "error" in resp:
-            raise RuntimeError(resp["error"])
-        return resp["result"]
+            raise RuntimeError(f"tools/list error: {resp['error']}")
+        result = resp.get("result")
+        if not result or "tools" not in result:
+            raise KeyError(f"tools/list missing 'result.tools': {resp}")
+        return result["tools"]
 
-    def list_tools(self):
-        return self._rpc("tools/list").get("tools", [])
+    def call_tool(self, name: str, arguments: dict | None = None) -> str:
+        resp = self.call("tools/call", {"name": name, "arguments": arguments or {}})
+        if "error" in resp:
+            # Return a texty error so the model can read it
+            return f"[mcp-error] {resp['error']}"
+        result = resp.get("result", {})
+        items = result.get("content") or []
+        if items and isinstance(items, list) and isinstance(items[0], dict) and "text" in items[0]:
+            return str(items[0]["text"])
+        # Fallback: dump whatever came back
+        return json.dumps(result)
 
-    def call_tool(self, name, arguments):
-        res = self._rpc("tools/call", {"name": name, "arguments": arguments or {}})
-        # normalize result to text
-        text = ""
-        if isinstance(res, dict) and isinstance(res.get("content"), list):
-            parts = [c.get("text","") for c in res["content"]
-                     if isinstance(c, dict) and c.get("type")=="text"]
-            text = "\n".join([p for p in parts if p])
-        return text or json.dumps(res)
 
-def to_openai_tools_schema(mcp_tools):
-    tools = []
-    for t in mcp_tools:
-        params = t.get("inputSchema") or {"type":"object","properties":{}}
-        if isinstance(params, dict) and params.get("$schema"):
-            params = {k:v for k,v in params.items() if k != "$schema"}
-        tools.append({
+def mcp_tools_to_openai(tools_list: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    Convert MCP tool schemas to OpenAI function tool schemas.
+    """
+    out: List[Dict[str, Any]] = []
+    for t in tools_list:
+        out.append({
             "type": "function",
             "function": {
                 "name": t["name"],
-                "description": t.get("description",""),
-                "parameters": params
+                "description": t.get("description", ""),
+                "parameters": t.get("inputSchema", {"type": "object", "properties": {}})
             }
         })
-    return tools
+    return out
 
-# ---------- main REPL ----------
-def main():
-    # env & clients
-    load_dotenv(find_dotenv(), override=True)
-    api_key = (os.getenv("OPENAI_API_KEY") or "").strip()
-    model = (os.getenv("OPENAI_MODEL") or MODEL_DEFAULT).strip()
-    if not api_key:
-        print("Error: OPENAI_API_KEY is missing. Add it to .env", file=sys.stderr)
-        sys.exit(1)
-    client = OpenAI(api_key=api_key)
 
-    # start MCP
-    mcp = MCP(MCP_CMD, MCP_ARGS)
-    mcp.start()
-    mcp_tools = mcp.list_tools()
-    tools_schema = to_openai_tools_schema(mcp_tools)
-    print(f"[mcp] attached {len(mcp_tools)} tool(s): " + ", ".join(t["name"] for t in mcp_tools))
+# ---------- Chat REPL ----------
+def main() -> None:
+    # OpenAI client
+    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-    # chat state
-    messages = [{"role":"system","content":SYSTEM_PROMPT}]
-    print("CLI chat ready. Type your message. Commands: /reset, /reload, /exit")
+    # Start MCP and load tools
+    mcp = MCPProc(MCP_CMD)
 
-    # graceful exit on Ctrl+C
-    signal.signal(signal.SIGINT, lambda *a: (_ for _ in ()).throw(KeyboardInterrupt()))
+    def refresh_tools() -> tuple[list[dict], list[dict]]:
+        mcp.start()  # starts proc and performs handshake if supported
+        tools = mcp.list_tools()
+        return tools, mcp_tools_to_openai(tools)
+
+    try:
+        tools_list, oa_tools = refresh_tools()
+    except Exception as e:
+        print(f"[error] Failed to start/list MCP tools: {e}")
+        log(f"ERROR starting MCP/tools: {e}")
+        return
+
+    print("CLI Chat ready. Commands: /help /tools /reset /reload /exit")
+    messages: List[Dict[str, Any]] = []
+    log("=== session start ===")
+
+    def pretty_tools() -> str:
+        return "\n".join(f"- {t['name']}: {t.get('description','')}" for t in tools_list)
 
     while True:
         try:
-            user = input("\nYou > ").strip()
+            user = input("> ").strip()
         except (EOFError, KeyboardInterrupt):
-            print("\n[bye]")
+            print()
             break
 
-        # commands
-        if user in ("/exit", "/quit"):
-            break
-        if user == "/reset":
-            messages = [{"role":"system","content":SYSTEM_PROMPT}]
-            print("[state] conversation reset")
-            continue
-        if user == "/reload":
-            # restart mcp & refresh tools
-            mcp.stop(); mcp.start()
-            mcp_tools = mcp.list_tools()
-            tools_schema = to_openai_tools_schema(mcp_tools)
-            print(f"[mcp] reloaded {len(mcp_tools)} tool(s)")
-            continue
         if not user:
             continue
 
-        messages.append({"role":"user","content":user})
+        # Slash commands
+        if user in ("/exit", "/quit"):
+            break
+        if user == "/help":
+            print("Commands:")
+            print("  /tools   - list available tools from MCP server")
+            print("  /reload  - restart MCP server & reload tools")
+            print("  /reset   - clear chat history")
+            print("  /exit    - quit")
+            continue
+        if user == "/tools":
+            print(pretty_tools())
+            continue
+        if user == "/reset":
+            messages.clear()
+            print("[ok] chat history cleared")
+            continue
+        if user == "/reload":
+            try:
+                mcp.stop()
+                tools_list, oa_tools = refresh_tools()
+                print("[ok] MCP reloaded. Tools:")
+                print(pretty_tools())
+            except Exception as e:
+                print(f"[error] reload failed: {e}")
+                log(f"ERROR reload: {e}")
+            continue
 
-        # first completion (let the model decide tools)
-        resp = chat_with_retry(client,
-            model=model, messages=messages,
-            tools=tools_schema, tool_choice="auto"
-        )
-        print_usage(resp)
-        msg = resp.choices[0].message
-        tool_calls = getattr(msg, "tool_calls", None)
+        # Regular user message
+        messages.append({"role": "user", "content": user})
+        log(f"USER: {user}")
 
-        # if tool calls: execute (bounded) and send results back
-        tool_call_count = 0
-        if tool_calls:
-            # append assistant stub with tool_calls (OpenAI schema requirement)
+        # Tool-call loop with safety cap
+        for _ in range(16):
+            try:
+                resp = client.chat.completions.create(
+                    model=MODEL,
+                    messages=messages,
+                    tools=oa_tools,
+                    tool_choice="auto"
+                )
+                usage = getattr(resp, "usage", None)
+                if usage:
+                    print(f"[usage] prompt={usage.prompt_tokens} completion={usage.completion_tokens} total={usage.total_tokens}")
+                    log(f"USAGE: prompt={usage.prompt_tokens} completion={usage.completion_tokens} total={usage.total_tokens}")
+
+            except Exception as e:
+                print(f"[error] OpenAI call failed: {e}")
+                log(f"ERROR openai: {e}")
+                break
+
+            msg = resp.choices[0].message
+            tool_calls = getattr(msg, "tool_calls", None)
+
+            # Final answer
+
+            if not tool_calls:
+                # Only log, do not print assistant answer
+                answer = msg.content or ""
+                # print(f"\nAssistant: {answer}\n")  # <--- commented out, restore to show assistant output
+                log(f"ASSIST: {answer}")
+                messages.append({
+                    "role": "assistant",
+                    "content": answer
+                })
+                break
+
+                # Add assistant message with tool_calls before tool messages
             messages.append({
-                "role":"assistant",
-                "content": msg.content or "",
-                "tool_calls":[tc.model_dump() for tc in tool_calls]
-            })
+                    "role": "assistant",
+                    "content": msg.content or "",
+                    "tool_calls": [tc.model_dump() for tc in tool_calls]
+                })
+            # Execute tool calls via MCP
             for tc in tool_calls:
-                if tool_call_count >= TOOL_CALL_MAX:
-                    messages.append({"role":"tool","tool_call_id":tc.id,
-                                     "content":"Tool-call limit exceeded"})
-                    continue
-                fn = tc.function
-                args = {}
+                name = tc.function.name
                 try:
-                    args = json.loads(fn.arguments or "{}")
+                    args = json.loads(tc.function.arguments or "{}")
                 except Exception:
-                    pass
-                result_text = mcp.call_tool(fn.name, args)
-                messages.append({"role":"tool","tool_call_id":tc.id,"content":result_text})
-                tool_call_count += 1
+                    args = {}
 
-            # final completion with tool results
-            resp2 = chat_with_retry(client, model=model, messages=messages)
-            print_usage(resp2)
-            final = resp2.choices[0].message.content
-        else:
-            final = msg.content
+                try:
+                    text = mcp.call_tool(name, args)
+                    print(f"[tool:{name}] {text[:600]}")
+                    log(f"TOOL {name}({args}) -> {text[:2000]}")
+                    messages.append({
+                        "role": "tool",
+                        "tool_call_id": tc.id,
+                        "content": text
+                    })
+                except Exception as e:
+                    err = f"Tool '{name}' failed: {e}"
+                    print(f"[error] {err}")
+                    log(f"ERROR tool {name}: {e}")
+                    messages.append({
+                        "role": "tool",
+                        "tool_call_id": tc.id,
+                        "content": err
+                    })
+                    # Let the model decide how to proceed with the error message
 
-        print(f"Assistant > {final}")
+    # graceful exit
+    log("=== session end ===")
+    try:
+        mcp.stop()
+    except Exception:
+        pass
+    print("bye 👋")
 
-    mcp.stop()
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\nbye 👋")

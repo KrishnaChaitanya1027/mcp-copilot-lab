@@ -1,5 +1,29 @@
 # MCP Copilot Lab
 
+## Usage
+
+This project provides:
+- `cli_chat.py`: A CLI chat client that connects to your MCP server and exposes safe tools to OpenAI function-calling.
+- `hello_mcp_server.py`: Minimal MCP server with 6 tools (say_hello, get_time, math_eval, search_files, read_file, summarize_logs).
+- `mcp_server.py`: Advanced MCP server with guardrails and tool implementations.
+
+### How to run
+
+1. Start the MCP server:
+  ```bash
+  python hello_mcp_server.py
+  # or
+  python mcp_server.py
+  ```
+2. Run the CLI chat client:
+  ```bash
+  uv run python cli_chat.py
+  ```
+
+### Output
+
+Tool results and token usage are shown in the CLI. Assistant output is suppressed by default (see cli_chat.py for details).
+
 [![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://www.python.org/)
 [![uv](https://img.shields.io/badge/packaging-uv-brightgreen)](https://docs.astral.sh/uv/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
