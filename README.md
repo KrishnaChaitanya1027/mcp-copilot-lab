@@ -4,7 +4,7 @@
 [![uv](https://img.shields.io/badge/packaging-uv-brightgreen)](https://docs.astral.sh/uv/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Minimal **Model Context Protocol (MCP)** lab that shows how to take a server from “toy demo” to a modular, stateful copilot. The repository now ships opinionated guardrails, persistent memory, artifact management, alerting, and both CLI and TUI chat clients.
+Minimal **Model Context Protocol (MCP)** lab that shows how to take a server from “toy demo” to a modular, stateful copilot. The repository now ships opinionated guardrails, persistent memory, artifact management, alerting, and a CLI chat client.
 
 - See `RECENT_FIXES.txt` for a running log of the latest improvements.
 
@@ -15,7 +15,6 @@ Minimal **Model Context Protocol (MCP)** lab that shows how to take a server fro
 - `mcp_server.py`: Primary server with structured JSON responses, guardrails, and dynamically registered tool packs.
 - `hello_mcp_server.py`: Minimal JSON-RPC sample that stays close to the SDK tutorial.
 - `cli_chat.py`: Thin CLI wrapper that connects to the MCP server and prints tool traces/token usage.
-- `tui_chat.py`: Experimental Textual UI with streaming responses, slash commands, and a `--self-test` harness.
 - `tools/`: Modular tool packs (`kv_store`, `config`, `artifacts`, `plans`, `dynamic_plans`, `progress`, `watchers`, `alerts`, `templates`, etc.).
 - `artifacts/`, `data/`, `logs/`: Sample state used by the automation features (safe to delete or regenerate).
 
@@ -43,13 +42,7 @@ Minimal **Model Context Protocol (MCP)** lab that shows how to take a server fro
    ```bash
    uv run python cli_chat.py
    ```
-5. **Try the TUI (optional)**
-   ```bash
-   python tui_chat.py            # launch interface
-   python tui_chat.py --self-test  # run smoke tests without UI
-   ```
-
-Tool results and token usage are shown inline. The CLI intentionally suppresses assistant prose; open the TUI or instrument the client if you want rendered responses.
+Tool results and token usage are shown inline. The CLI intentionally suppresses assistant prose; adjust the client if you want rendered responses.
 
 ---
 
