@@ -1,0 +1,3 @@
+logs/app.log — lines:2 — first:error one — last:warn two
+log/app.log — lines:1 — first:error KC is HAWT — last:error KC is HAWT
+logs/other.log — lines:2 — first:info one — last:error two

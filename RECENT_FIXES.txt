@@ -1,0 +1,32 @@
+Recent Fixes & Enhancements
+===========================
+
+Server & Guardrails
+-------------------
+- Standardized all built-in tools to return structured dictionaries with an `ok` flag so clients can branch reliably on failures.
+- Moved the sandbox root to `./artifacts`, keeping generated files quarantined from source while still enforcing extension and byte-size guardrails.
+- Introduced shared helpers (`tools/tool_utils.py`) for unwrapping FastMCP results, allowing nested tools to compose without brittle JSON parsing.
+
+Modular Tooling
+---------------
+- Added a persistent key/value store (`tools/kv_store.py`) with async helpers and optimistic corruption recovery.
+- Layered a profile-aware configuration system (`tools/config.py`) that honors environment overrides and exposes management tools.
+- Shipped workflow automation helpers:
+  * `tools/plans.py` for opinionated multi-step recipes.
+  * `tools/dynamic_plans.py` for on-the-fly templated sequences (with context propagation and optional KV snapshots).
+- Delivered operational tooling:
+  * `tools/progress.py` to read growing files incrementally and summarize new chunks.
+  * `tools/watchers.py` to run plans when file fingerprints change.
+  * `tools/alerts.py` to track log patterns and raise artifacts or downstream plans once thresholds hit.
+  * `tools/artifacts.py` to persist text/JSON/binary outputs and surface previews in chat.
+  * `tools/templates.py` to manage reusable report templates that pull from KV, config, and saved artifacts.
+
+Interface Updates
+-----------------
+- Added `tui_chat.py`, a Textual-based chat client with a streaming model stub, command palette, compacting history, and a basic self-test harness (`--self-test`).
+- Hardened compose/history plumbing in the TUI (no private Textual APIs, fixed message subclasses, durable log panel).
+
+Quality of Life
+---------------
+- Seeded sample artifacts/logs plus a default KV database to demonstrate the new tooling.
+- Documented quick-start prompts directly inside the TUI and modules to guide extending/customizing the system.
