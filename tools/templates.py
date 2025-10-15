@@ -9,8 +9,8 @@ from typing import Dict, Any, List, Optional
 from mcp.server.fastmcp import FastMCP
 from datetime import datetime
 from tools import config
-import json
 from tools.tool_utils import unwrap_tool_result
+import json
 
 # ---------- KV helpers (dict-args style) ----------
 async def _kv_get(mcp: FastMCP, key: str) -> Any:
@@ -35,7 +35,9 @@ async def _kv_set(mcp: FastMCP, key: str, value: Any) -> None:
     await mcp.call_tool("kv_set", {"key": key, "value": value})
 
 async def _kv_list(mcp: FastMCP, prefix: Optional[str] = None) -> List[str]:
-    res = unwrap_tool_result(await mcp.call_tool("kv_list", {"prefix": prefix} if prefix else {}))
+    res = unwrap_tool_result(
+        await mcp.call_tool("kv_list", {"prefix": prefix} if prefix else {})
+    )
     if isinstance(res, dict) and res.get("keys"):
         return list(res["keys"])
     return []
@@ -84,7 +86,7 @@ def register_template_tools(mcp: FastMCP) -> None:
     @mcp.tool()
     async def tpl_reindex() -> Dict[str, Any]:
         """Rebuild the template index from KV keys (template:<name>)."""
-        res = unwrap_tool_result(await mcp.call_tool("kv_list", {"prefix": "template:"}))
+        res = await mcp.call_tool("kv_list", {"prefix": "template:"})
         keys = (res.get("keys") if isinstance(res, dict) else []) or []
         names = sorted({
             k.split("template:", 1)[1]
@@ -100,7 +102,8 @@ def register_template_tools(mcp: FastMCP) -> None:
         Enumerate templates directly from KV keys every time.
         Ignores/doesn't trust 'template:index'.
         """
-        res = unwrap_tool_result(await mcp.call_tool("kv_list", {"prefix": "template:"}))
+        res = await mcp.call_tool("kv_list", {"prefix": "template:"})
+    
         keys = (res.get("keys") if isinstance(res, dict) else []) or []
         names = sorted({
             k.split("template:", 1)[1]
@@ -162,7 +165,11 @@ def register_template_tools(mcp: FastMCP) -> None:
                 except Exception:
                     pass
             ctx[k] = val
+            alias = k.replace(":", "_").replace("/", "_")
+            ctx.setdefault("kv_alias", {})[alias] = val
             ctx.setdefault("kv", {})[k] = val
+            if alias not in ctx:
+                ctx[alias] = val
 
         if extra:
             ctx.update(extra)
@@ -171,11 +178,9 @@ def register_template_tools(mcp: FastMCP) -> None:
         out: Dict[str, Any] = {"ok": True, "name": name, "rendered": rendered}
 
         if save_as:
-            saved = unwrap_tool_result(
-                await mcp.call_tool(
-                    "save_text",
-                    {"filename": save_as, "text": rendered, "overwrite": overwrite},
-                )
+            saved = await mcp.call_tool(
+                "save_text",
+                {"filename": save_as, "text": rendered, "overwrite": overwrite},
             )
             out["artifact"] = saved
 
@@ -212,9 +217,7 @@ def register_template_tools(mcp: FastMCP) -> None:
         art_text = ""
         if artifact_path:
             filename = str(artifact_path).split("/")[-1]  # read_artifact expects filename
-            rd = unwrap_tool_result(
-                await mcp.call_tool("read_artifact", {"filename": filename, "as_text": True})
-            )
+            rd = await mcp.call_tool("read_artifact", {"filename": filename, "as_text": True})
             if isinstance(rd, dict) and rd.get("ok"):
                 art_text = rd.get("text", "") or rd.get("preview", "") or ""
 
@@ -246,9 +249,7 @@ def register_template_tools(mcp: FastMCP) -> None:
                 "art_text": art_text,
             },
         )
-        saved = unwrap_tool_result(
-            await mcp.call_tool("save_text", {"filename": save_as, "text": text, "overwrite": overwrite})
-        )
+        saved = await mcp.call_tool("save_text", {"filename": save_as, "text": text, "overwrite": overwrite})
         return {"ok": True, "saved": saved, "preview": text[:300]}
     
     @mcp.tool()
@@ -259,7 +260,7 @@ def register_template_tools(mcp: FastMCP) -> None:
     @mcp.tool()
     async def tpl_debug() -> Dict[str, Any]:
         """Show raw KV state for templates namespace."""
-        res = unwrap_tool_result(await mcp.call_tool("kv_list", {"prefix": "template:"}))
+        res = await mcp.call_tool("kv_list", {"prefix": "template:"})
         idx = await _kv_get(mcp, "template:index")
         return {"ok": True, "kv_list": res, "index_value": idx}
 

@@ -1,5 +1,5 @@
 {
-  "template:incident_email": "Subject: {profile} — Update\n\nTime: {now}\nLast: {alert:last_path}\n\n{art_text}\n",
+  "template:incident_email": "Subject: {profile} — Update\n\nTime: {now}\nLast: {alert_last_path}\n\n{art_text}\n",
   "template:index": "[\"KC_TEST\", \"incident_email\"]",
   "template:KC_TEST": "This template is for the KC_TEST file created in artifacts, which contains numbers from 1 to 100."
 }

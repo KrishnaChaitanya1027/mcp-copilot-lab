@@ -152,17 +152,17 @@ def summarize_logs(pattern: str, max_files: int = 5, max_bytes_per_file: int = 5
 # ---- Import additional tools instead of defining each tool here.----
 
 
-from tools.kv_store import register_kv_tools
-register_kv_tools(mcp)
-
-from tools import config
-config.register_config_tools(mcp)
-
 from tools.dynamic_plans import register_dynamic_plan_tools
 register_dynamic_plan_tools(mcp)
 
 from tools.plans import register_plan_tools
 register_plan_tools(mcp)
+
+from tools.kv_store import register_kv_tools
+register_kv_tools(mcp)
+
+from tools import config
+config.register_config_tools(mcp)
 
 from tools.artifacts import register_artifact_tools
 register_artifact_tools(mcp)
@@ -173,14 +173,44 @@ register_progress_tools(mcp)
 from tools.watchers import register_watch_tools
 register_watch_tools(mcp)
 
-from tools.alerts import register_alert_tools
-register_alert_tools(mcp)
+from tools.watch_dir import register_watch_dir_tools
+register_watch_dir_tools(mcp)
+
+from tools.watch_dir_summary import register_watch_dir_summary_tools
+register_watch_dir_summary_tools(mcp)
 
 from tools.templates import register_template_tools
 register_template_tools(mcp)
 
+from tools.cases import register_case_tools
+register_case_tools(mcp)
 
+from tools.report_bundles import register_report_bundle_tools
+register_report_bundle_tools(mcp)
 
+from tools.net_diag import register_net_diag_tools
+register_net_diag_tools(mcp)
+
+from tools.tls_diag import register_tls_diag_tools
+register_tls_diag_tools(mcp)
+
+from tools.http_diag import register_http_diag_tools
+register_http_diag_tools(mcp)
+
+from tools.validators import register_validator_tools
+register_validator_tools(mcp)
+
+from tools.secrets import register_secret_tools
+register_secret_tools(mcp)
+
+from tools.audit import register_audit_tools
+register_audit_tools(mcp)
+
+from tools.rbac import register_rbac_tools
+register_rbac_tools(mcp)
+
+from tools.alerts import register_alert_tools
+register_alert_tools(mcp)
 
 
 # ---- Entry point ----

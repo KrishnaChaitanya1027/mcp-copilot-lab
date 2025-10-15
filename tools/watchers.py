@@ -82,14 +82,14 @@ def register_watch_tools(mcp: FastMCP) -> None:
         plan_out = None
         if changed and fp.get("exists"):
             # Inject {path} and any provided context for templating in run_plan
-            ctx = {"path": p}
+            ctx = {"path": p, "abs_path": p, "rel_path": path}
             if context:
                 ctx.update(context)
 
             # Attach these context vars into first step args if you rely on them
             # (Your steps can reference {path} or any ctx value directly.)
             plan_out = unwrap_tool_result(
-                await mcp.call_tool("run_plan", {"steps":steps, "save_key":None})
+                await mcp.call_tool("run_plan", {"steps":steps, "save_key":None, "context":ctx})
             )
 
             if save_state:

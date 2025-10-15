@@ -20,7 +20,8 @@ def _format_args(args: Dict[str, Any], ctx: Dict[str, Any]) -> Dict[str, Any]:
 def register_dynamic_plan_tools(mcp: FastMCP) -> None:
     @mcp.tool()
     async def run_plan(steps: List[Dict[str, Any]],
-                      save_key: Optional[str] = None) -> Dict[str, Any]:
+                      save_key: Optional[str] = None,
+                      context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
         Execute a dynamic plan.
         steps: list of { id?: str, tool: str, args: dict (templated strings ok) }
@@ -38,6 +39,8 @@ def register_dynamic_plan_tools(mcp: FastMCP) -> None:
         """
         results: List[Dict[str, Any]] = []
         ctx: Dict[str, Any] = {}  # dynamic template context
+        if context:
+            ctx.update(context)
 
         for idx, step in enumerate(steps):
             tool = step.get("tool")

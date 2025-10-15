@@ -78,7 +78,7 @@ def register_progress_tools(mcp: FastMCP) -> None:
             start = 0
 
         read_upto = min(max_bytes, max(0, size_now - start))
-        with open(p, "rb") as f:
+        with abs_path.open("rb") as f:
             f.seek(start)
             data = f.read(read_upto)
 
@@ -90,11 +90,11 @@ def register_progress_tools(mcp: FastMCP) -> None:
         end = start + len(data)
         eof = (end >= size_now)
 
-        await _kv_set_json(mcp, _key_for(path), {"offset": end, "size": size_now})
+        await _kv_set_json(mcp, _key_for(str(abs_path)), {"offset": end, "size": size_now})
 
         return {
             "ok": True,
-            "path": p,
+            "path": str(abs_path),
             "start": start,
             "end": end,
             "eof": eof,
