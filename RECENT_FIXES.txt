@@ -1,6 +1,14 @@
 Recent Fixes & Enhancements
 ===========================
 
+2025-10-15 — Incident Command Upgrade
+------------------------------------
+- Promoted the lab into an incident-ready cockpit with `tools/cases.py` for durable case timelines plus `tools/report_bundles.py` to zip everything into instant handoff packages.
+- Wired continuous observability: `watch_dir`, `watch_dir_summary`, and the alert loop now orchestrate fingerprinted log polling, threshold triggers, and auto-saved forensics.
+- Dropped a network x-ray trio (`http_diag`, `tls_diag`, `net_diag`) that streams redacted probes straight into `artifacts/` for copy/paste postmortems.
+- Locked down credentials with the new RBAC layer (`tools/rbac.py`) and per-session secret vault (`tools/secrets.py`), all chained through consistent `{"ok": ...}` responses.
+- Shipped a two-minute incident workout (`scripts/smoke.md`) showcasing how watchers, alerts, diagnostics, and bundles deliver a cinematic rehearsal from the CLI.
+
 Server & Guardrails
 -------------------
 - Standardized all built-in tools to return structured dictionaries with an `ok` flag so clients can branch reliably on failures.
